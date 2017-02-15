@@ -15,10 +15,10 @@ lex :: Lexer
 lex ((l, c) : cs)
     | c == ' ' = lex cs
     | c == '\n' = ((l, Newline) :) <$> lex cs
-    | c == ':' = lexIdentifier l ConsI (c :) cs
-    | isFreeSymbol c = lexIdentifier l VarI (c :) cs
-    | isUpper c = lexIdentifier l ConsP (c :) cs
-    | isLower c = lexIdentifier l VarP (c :) cs
+    | c == ':' = lexIdentifier l IdColon (c :) cs
+    | isFreeSymbol c = lexIdentifier l IdSymbol (c :) cs
+    | isLower c = lexIdentifier l IdLower (c :) cs
+    | isUpper c = lexIdentifier l IdUpper (c :) cs
     | otherwise = Left $ unexpected l c
 lex [] = Right []
 
@@ -30,7 +30,7 @@ lexIdentifier s t a ((l, c) : cs)
 lexIdentifier s t a [] = Right [(s, catchReserved . t $ a [])]
 
 catchReserved :: Tok -> Tok
-catchReserved (VarI "=") = Assign
+catchReserved (IdSymbol "=") = Equals
 catchReserved t = t
 
 isFreeSymbol :: Char -> Bool

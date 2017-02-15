@@ -1,11 +1,11 @@
 module Dama.Token
     ( Token
     , Tok
-        ( ConsP
-        , ConsI
-        , VarP
-        , VarI
-        , Assign
+        ( IdLower 
+        , IdUpper 
+        , IdSymbol
+        , IdColon 
+        , Equals
         , Newline
         )
     ) where
@@ -15,10 +15,10 @@ import Dama.Location
 type Token = (Location, Tok)
 
 data Tok
-    = ConsP String
-    | ConsI String
-    | VarP String
-    | VarI String
-    | Assign
+    = IdLower String
+    | IdUpper String
+    | IdSymbol String
+    | IdColon String
+    | Equals
     | Newline
     deriving (Eq, Ord, Show)
