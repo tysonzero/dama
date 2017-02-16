@@ -6,6 +6,7 @@ import Control.Applicative (Alternative, empty, (<|>))
 import Control.Monad (MonadPlus)
 import Control.Monad.Except (Except, MonadError, runExcept)
 import Control.Monad.State (MonadState, StateT, evalStateT)
+import Data.Bifunctor (first)
 
 import Dama.AST
 import Dama.Error
@@ -20,8 +21,8 @@ instance Monoid (Parser a) where
     mempty = empty
     mappend = (<|>)
 
-parse :: [Token] -> Either [Error] Program
-parse = runExcept . evalStateT (runParser program)
+parse :: [Token] -> Either Error Program
+parse = first maximum . runExcept . evalStateT (runParser program)
 
 program :: Parser Program
 program = error "program"
