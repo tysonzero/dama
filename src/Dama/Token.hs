@@ -21,4 +21,3 @@ data Tok
     | IdColon String
     | Equals
     | Newline
-    deriving (Eq, Ord, Show)
