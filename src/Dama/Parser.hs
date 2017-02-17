@@ -10,18 +10,19 @@ import Data.Bifunctor (first)
 
 import Dama.AST
 import Dama.Error
+import Dama.Location
 import Dama.Token
 
-newtype Parser a = Parser { runParser :: StateT [Token] (Except [Error]) a }
+newtype Parser a = Parser { runParser :: StateT (LocList Token) (Except [Error]) a }
     deriving ( Functor, Applicative, Monad, Alternative, MonadPlus
-             , MonadState [Token], MonadError [Error]
+             , MonadState (LocList Token), MonadError [Error]
              )
 
 instance Monoid (Parser a) where
     mempty = empty
     mappend = (<|>)
 
-parse :: [Token] -> Either Error Program
+parse :: LocList Token -> Either Error Program
 parse = first maximum . runExcept . evalStateT (runParser program)
 
 program :: Parser Program
