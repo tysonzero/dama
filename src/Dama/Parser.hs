@@ -2,11 +2,12 @@
 
 module Dama.Parser (parse) where
 
-import Control.Applicative (Alternative)
+import Control.Applicative (Alternative, empty, many, (<|>))
 import Control.Monad (MonadPlus)
-import Control.Monad.Except (Except, MonadError, runExcept)
-import Control.Monad.State (MonadState, StateT, evalStateT)
+import Control.Monad.Except (Except, MonadError, runExcept, throwError)
+import Control.Monad.State (MonadState, StateT, evalStateT, get, put)
 import Data.Bifunctor (first)
+import Data.Monoid ((<>))
 
 import Dama.AST
 import Dama.Error
@@ -18,8 +19,50 @@ newtype Parser a = Parser { runParser :: StateT (LocList Token) (Except [Error])
              , MonadState (LocList Token), MonadError [Error]
              )
 
+instance Monoid (Parser a) where
+    mempty = empty
+    mappend = (<|>)
+
 parse :: LocList Token -> Either Error Program
 parse = first maximum . runExcept . evalStateT (runParser program)
 
 program :: Parser Program
-program = error "program"
+program = Program () <$ many (many newline *> declaration) <* many newline <* end
+
+declaration :: Parser ()
+declaration = () <$ idLower <* equals <* idLower <> idUpper
+
+idLower :: Parser String
+idLower = get >>= \case
+    (_, IdLower s) :- xs -> put xs *> pure s
+    _ -> unexpected
+
+idUpper :: Parser String
+idUpper = get >>= \case
+    (_, IdUpper s) :- xs -> put xs *> pure s
+    _ -> unexpected
+
+equals :: Parser ()
+equals = get >>= \case
+    (_, Equals) :- xs -> put xs
+    _ -> unexpected
+
+newline :: Parser ()
+newline = get >>= \case
+    (_, Newline) :- xs -> put xs
+    _ -> unexpected
+
+end :: Parser ()
+end = get >>= \case
+    Nil _ -> pure ()
+    _ -> unexpected
+
+unexpected :: Parser a
+unexpected = get >>= \case
+    (l, IdLower _) :- _ -> throwError [(l, "Unexpected lower case identifier")]
+    (l, IdUpper _) :- _ -> throwError [(l, "Unexpected upper case identifier")]
+    (l, IdSymbol _) :- _ -> throwError [(l, "Unexpected symbol identifier")]
+    (l, IdColon _) :- _ -> throwError [(l, "Unexpected colon identifier")]
+    (l, Equals) :- _ -> throwError [(l, "Unexpected equals")]
+    (l, Newline) :- _ -> throwError [(l, "Unexpected newline")]
+    Nil l -> throwError [(l, "Unexpected end of input")]
