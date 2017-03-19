@@ -33,7 +33,7 @@ declaration :: Parser Decl
 declaration = Decl <$> idLower <* equals <*> rightHandSide
 
 rightHandSide :: Parser [Ident]
-rightHandSide = some (Prefix <$> idLower <> idUpper <|> Infix <$> idSymbol <> idColon)
+rightHandSide = some $ Prefix <$> idLower <> idUpper <|> Infix <$> idSymbol <> idColon
 
 idLower :: Parser String
 idLower = get >>= \case
