@@ -27,13 +27,13 @@ parse :: LocList Token -> Either Error Program
 parse = first maximum . runExcept . evalStateT (runParser program)
 
 program :: Parser Program
-program = Program () <$ many (many newline *> declaration) <* many newline <* end
+program = Program <$> many (many newline *> declaration) <* many newline <* end
 
-declaration :: Parser ()
-declaration = () <$ idLower <* equals <* rightHandSide
+declaration :: Parser (String, [Ident])
+declaration = (,) <$> idLower <* equals <*> rightHandSide
 
-rightHandSide :: Parser ()
-rightHandSide = () <$ some (idLower <> idUpper <> idSymbol <> idColon)
+rightHandSide :: Parser [Ident]
+rightHandSide = some (Prefix <$> idLower <> idUpper <|> Infix <$> idSymbol <> idColon)
 
 idLower :: Parser String
 idLower = get >>= \case
