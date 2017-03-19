@@ -1,9 +1,8 @@
 module Dama.Annotator (annotate) where
 
-import Dama.CharX
 import Dama.Location
 
-annotate :: FilePath -> String -> LocList CharX
+annotate :: FilePath -> String -> LocList Char
 annotate f s = go s 1 1
   where
     go ('\n' : xs) l c = ((f, l, c), '\n') :- go xs (l + 1) 0

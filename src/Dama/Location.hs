@@ -4,7 +4,7 @@ import Data.Monoid ((<>))
 
 type Location = (FilePath, Integer, Integer)
 
-data LocList a = Nil Location | a :- LocList a
+data LocList a = Nil Location | (Location, a) :- LocList a
 infixr 5 :-
 
 instance Show a => Show (LocList a) where

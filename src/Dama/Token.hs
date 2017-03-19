@@ -1,6 +1,5 @@
 module Dama.Token
     ( Token
-    , Tok
         ( IdLower 
         , IdUpper 
         , IdSymbol
@@ -10,11 +9,7 @@ module Dama.Token
         )
     ) where
 
-import Dama.Location
-
-type Token = (Location, Tok)
-
-data Tok
+data Token
     = IdLower String
     | IdUpper String
     | IdSymbol String
