@@ -25,7 +25,7 @@ lex (Nil l) = Right $ Nil l
 
 lexIdentifier :: Location -> (String -> Tok) -> (String -> String) -> Lexer
 lexIdentifier s t a ((l, c) :- cs)
-    | c `elem` " \n" = ((s, catchReserved . t $ a []) :-) <$> lex cs
+    | c `elem` " \n" = ((s, catchReserved . t $ a []) :-) <$> lex ((l, c) :- cs)
     | isAlpha c || isFreeSymbol c = lexIdentifier s t (a . (c :)) cs
     | otherwise = Left (l, "Unexpected character " <> show c)
 lexIdentifier s t a (Nil l) = Right $ (s, catchReserved . t $ a []) :- Nil l
