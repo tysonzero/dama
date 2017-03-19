@@ -29,8 +29,8 @@ parse = first maximum . runExcept . evalStateT (runParser program)
 program :: Parser Program
 program = Program <$> many (many newline *> declaration) <* many newline <* end
 
-declaration :: Parser (String, [Ident])
-declaration = (,) <$> idLower <* equals <*> rightHandSide
+declaration :: Parser Decl
+declaration = Decl <$> idLower <* equals <*> rightHandSide
 
 rightHandSide :: Parser [Ident]
 rightHandSide = some (Prefix <$> idLower <> idUpper <|> Infix <$> idSymbol <> idColon)

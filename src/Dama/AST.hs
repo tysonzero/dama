@@ -1,9 +1,13 @@
 module Dama.AST
     ( Program(Program)
+    , Decl(Decl)
     , Ident(Prefix, Infix)
     ) where
 
-newtype Program = Program [(String, [Ident])]
+newtype Program = Program [Decl]
+    deriving Show
+
+data Decl = Decl String [Ident]
     deriving Show
 
 data Ident
