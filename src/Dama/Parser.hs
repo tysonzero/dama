@@ -2,7 +2,7 @@
 
 module Dama.Parser (parse) where
 
-import Control.Applicative (Alternative, empty, many, (<|>))
+import Control.Applicative (Alternative, empty, many, some, (<|>))
 import Control.Monad (MonadPlus)
 import Control.Monad.Except (Except, MonadError, runExcept, throwError)
 import Control.Monad.State (MonadState, StateT, evalStateT, get, put)
@@ -30,7 +30,10 @@ program :: Parser Program
 program = Program () <$ many (many newline *> declaration) <* many newline <* end
 
 declaration :: Parser ()
-declaration = () <$ idLower <* equals <* idLower <> idUpper
+declaration = () <$ idLower <* equals <* rightHandSide
+
+rightHandSide :: Parser ()
+rightHandSide = () <$ some (idLower <> idUpper <> idSymbol <> idColon)
 
 idLower :: Parser String
 idLower = get >>= \case
@@ -40,6 +43,16 @@ idLower = get >>= \case
 idUpper :: Parser String
 idUpper = get >>= \case
     (_, IdUpper s) :- xs -> put xs *> pure s
+    _ -> unexpected
+
+idSymbol :: Parser String
+idSymbol = get >>= \case
+    (_, IdSymbol s) :- xs -> put xs *> pure s
+    _ -> unexpected
+
+idColon :: Parser String
+idColon = get >>= \case
+    (_, IdColon s) :- xs -> put xs *> pure s
     _ -> unexpected
 
 equals :: Parser ()
