@@ -72,10 +72,10 @@ end = get >>= \case
 
 unexpected :: Parser a
 unexpected = get >>= \case
-    (l, IdLower _) :- _ -> throwError [(l, "Unexpected lower case identifier")]
-    (l, IdUpper _) :- _ -> throwError [(l, "Unexpected upper case identifier")]
-    (l, IdSymbol _) :- _ -> throwError [(l, "Unexpected symbol identifier")]
-    (l, IdColon _) :- _ -> throwError [(l, "Unexpected colon identifier")]
+    (l, IdLower s) :- _ -> throwError [(l, "Unexpected lower case identifier: " <> s)]
+    (l, IdUpper s) :- _ -> throwError [(l, "Unexpected upper case identifier: " <> s)]
+    (l, IdSymbol s) :- _ -> throwError [(l, "Unexpected symbol identifier: " <> s)]
+    (l, IdColon s) :- _ -> throwError [(l, "Unexpected colon identifier: " <> s)]
     (l, Equals) :- _ -> throwError [(l, "Unexpected equals")]
     (l, Newline) :- _ -> throwError [(l, "Unexpected newline")]
     Nil l -> throwError [(l, "Unexpected end of input")]
