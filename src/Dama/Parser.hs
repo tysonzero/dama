@@ -2,7 +2,7 @@
 
 module Dama.Parser (parse) where
 
-import Control.Applicative (Alternative, empty, many, some, (<|>))
+import Control.Applicative (Alternative, empty, many, (<|>))
 import Control.Monad (MonadPlus)
 import Control.Monad.Except (Except, MonadError, runExcept, throwError)
 import Control.Monad.State (MonadState, StateT, evalStateT, get, put)
@@ -30,10 +30,13 @@ program :: Parser Program
 program = Program <$> many (many newline *> declaration) <* many newline <* end
 
 declaration :: Parser Decl
-declaration = Decl <$> idLower <* equals <*> rightHandSide
+declaration = Decl <$> idLower <* equals <*> expr
 
-rightHandSide :: Parser [Ident]
-rightHandSide = some $ Prefix <$> idLower <> idUpper <|> Infix <$> idSymbol <> idColon
+expr :: Parser [Ident]
+expr = (:) <$> (Prefix <$> idLower <> idUpper) <*> rightSection <> expr <> pure []
+
+rightSection :: Parser [Ident]
+rightSection = (:) <$> (Infix <$> idSymbol <> idColon) <*> expr
 
 idLower :: Parser String
 idLower = get >>= \case
