@@ -27,7 +27,8 @@ parse :: LocList Token -> Either Error Program
 parse = first maximum . runExcept . evalStateT (runParser program)
 
 program :: Parser Program
-program = Program <$> many (many newline *> declaration) <* many newline <* end
+program = many newline *> ((|:) <$> declaration <*> program) <> (Program [] <$ end)
+    where x |: Program xs = Program $ x : xs
 
 declaration :: Parser Decl
 declaration = Decl <$> idLower <* equals <*> expr
