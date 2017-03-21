@@ -6,6 +6,8 @@ module Dama.Token
         , IdColon 
         , Equals
         , Newline
+        , OpenParen
+        , CloseParen
         )
     ) where
 
@@ -16,4 +18,6 @@ data Token
     | IdColon String
     | Equals
     | Newline
+    | OpenParen
+    | CloseParen
     deriving Show

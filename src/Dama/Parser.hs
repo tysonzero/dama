@@ -7,6 +7,7 @@ import Control.Monad (MonadPlus)
 import Control.Monad.Except (Except, MonadError, runExcept, throwError)
 import Control.Monad.State (MonadState, StateT, evalStateT, get, put)
 import Data.Bifunctor (first)
+import Data.List.NonEmpty (NonEmpty((:|)), (<|))
 import Data.Monoid ((<>))
 
 import Dama.AST
@@ -32,11 +33,14 @@ program = many newline *> ((:) <$> declaration <*> program) <> ([] <$ end)
 declaration :: Parser Decl
 declaration = Decl <$> idLower <* equals <*> expr <* newline <> end
 
-expr :: Parser [Ident]
-expr = (:) <$> (Prefix <$> idLower <> idUpper) <*> rightSection <> expr <> pure []
+expr :: Parser Expr
+expr = (<|) <$> item <*> expr <> rightSection <|> ((:| []) <$> item)
+  where
+    item = ExprIdent . Prefix <$> idLower <> idUpper
+       <|> SubExpr <$ openParen <*> expr <* closeParen
 
-rightSection :: Parser [Ident]
-rightSection = (:) <$> (Infix <$> idSymbol <> idColon) <*> expr
+rightSection :: Parser Expr
+rightSection = (<|) <$> (ExprIdent . Infix <$> idSymbol <> idColon) <*> expr
 
 idLower :: Parser String
 idLower = get >>= \case
@@ -68,6 +72,16 @@ newline = get >>= \case
     (_, Newline) :- xs -> put xs
     _ -> unexpected
 
+openParen :: Parser ()
+openParen = get >>= \case
+    (_, OpenParen) :- xs -> put xs
+    _ -> unexpected
+
+closeParen :: Parser ()
+closeParen = get >>= \case
+    (_, CloseParen) :- xs -> put xs
+    _ -> unexpected
+
 end :: Parser ()
 end = get >>= \case
     Nil _ -> pure ()
@@ -81,4 +95,6 @@ unexpected = get >>= \case
     (l, IdColon s) :- _ -> throwError [(l, "Unexpected colon identifier: " <> s)]
     (l, Equals) :- _ -> throwError [(l, "Unexpected equals")]
     (l, Newline) :- _ -> throwError [(l, "Unexpected newline")]
+    (l, OpenParen) :- _ -> throwError [(l, "Unexpected open paren")]
+    (l, CloseParen) :- _ -> throwError [(l, "Unexpected close paren")]
     Nil l -> throwError [(l, "Unexpected end of input")]
