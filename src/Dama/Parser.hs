@@ -7,6 +7,7 @@ import Control.Monad (MonadPlus)
 import Control.Monad.Except (Except, MonadError, runExcept, throwError)
 import Control.Monad.State (MonadState, StateT, evalStateT, get, put)
 import Data.Bifunctor (first)
+import Data.Bool (bool)
 import Data.List.NonEmpty (NonEmpty((:|)), (<|))
 import Data.Monoid ((<>))
 
@@ -31,16 +32,17 @@ program :: Parser Program
 program = many newline *> ((:) <$> declaration <*> program) <> ([] <$ end)
 
 declaration :: Parser Decl
-declaration = Decl <$> idLower <* equals <*> expr <* newline <> end
+declaration = Decl <$> idLower <* equals <*> expr False False <* newline <> end
 
-expr :: Parser Expr
-expr = (<|) <$> item <*> expr <> rightSection <|> ((:| []) <$> item)
+expr :: Bool -> Bool -> Parser Expr
+expr l r = (<|) <$> prefixPart <*> expr True r
+       <|> (<|) <$> bool prefixPart anyPart l <*> expr False r
+       <|> (:| []) <$> bool prefixPart anyPart (l && r)
   where
-    item = ExprIdent . Prefix <$> idLower <> idUpper
-       <|> SubExpr <$ openParen <*> expr <* closeParen
-
-rightSection :: Parser Expr
-rightSection = (<|) <$> (ExprIdent . Infix <$> idSymbol <> idColon) <*> expr
+    anyPart = ExprIdent . Infix <$> idSymbol <> idColon <|> prefixPart
+    prefixPart = ExprIdent . Prefix <$> idLower <> idUpper
+             <|> SubExpr <$ openParen <*> parenExpr <* closeParen
+    parenExpr = expr False True <|> expr True False <|> (:| []) <$> anyPart
 
 idLower :: Parser String
 idLower = get >>= \case
