@@ -30,7 +30,7 @@ program :: Parser Program
 program = many newline *> ((:) <$> declaration <*> program) <> ([] <$ end)
 
 declaration :: Parser Decl
-declaration = Decl <$> idLower <* equals <*> expr
+declaration = Decl <$> idLower <* equals <*> expr <* newline <> end
 
 expr :: Parser [Ident]
 expr = (:) <$> (Prefix <$> idLower <> idUpper) <*> rightSection <> expr <> pure []
