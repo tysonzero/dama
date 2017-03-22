@@ -4,9 +4,9 @@ module Dama.Parser (parse) where
 
 import Control.Applicative (Alternative, empty, many, (<|>))
 import Control.Monad (MonadPlus)
-import Control.Monad.Except (Except, MonadError, runExcept, throwError)
 import Control.Monad.State (MonadState, StateT, evalStateT, get, put)
-import Data.Bifunctor (first)
+import Control.Monad.Trans.Maybe (MaybeT, runMaybeT)
+import Control.Monad.Writer (MonadWriter, Writer, runWriter, tell)
 import Data.Bool (bool)
 import Data.List.NonEmpty (NonEmpty((:|)), (<|))
 import Data.Monoid ((<>))
@@ -16,9 +16,9 @@ import Dama.Error
 import Dama.Location
 import Dama.Token
 
-newtype Parser a = Parser { runParser :: StateT (LocList Token) (Except [Error]) a }
+newtype Parser a = Parser { runParser :: StateT (LocList Token) (MaybeT (Writer [Error])) a }
     deriving ( Functor, Applicative, Monad, Alternative, MonadPlus
-             , MonadState (LocList Token), MonadError [Error]
+             , MonadState (LocList Token), MonadWriter [Error]
              )
 
 instance Monoid (Parser a) where
@@ -26,7 +26,10 @@ instance Monoid (Parser a) where
     mappend = (<|>)
 
 parse :: LocList Token -> Either Error Program
-parse = first maximum . runExcept . evalStateT (runParser program)
+parse = toEither . runWriter . runMaybeT . evalStateT (runParser program)
+  where
+    toEither (Just p, _) = Right p
+    toEither (Nothing, es) = Left $ maximum es
 
 program :: Parser Program
 program = many newline *> ((:) <$> declaration <*> program) <> ([] <$ end)
@@ -91,12 +94,12 @@ end = get >>= \case
 
 unexpected :: Parser a
 unexpected = get >>= \case
-    (l, IdLower s) :- _ -> throwError [(l, "Unexpected lower case identifier: " <> s)]
-    (l, IdUpper s) :- _ -> throwError [(l, "Unexpected upper case identifier: " <> s)]
-    (l, IdSymbol s) :- _ -> throwError [(l, "Unexpected symbol identifier: " <> s)]
-    (l, IdColon s) :- _ -> throwError [(l, "Unexpected colon identifier: " <> s)]
-    (l, Equals) :- _ -> throwError [(l, "Unexpected equals")]
-    (l, Newline) :- _ -> throwError [(l, "Unexpected newline")]
-    (l, OpenParen) :- _ -> throwError [(l, "Unexpected open paren")]
-    (l, CloseParen) :- _ -> throwError [(l, "Unexpected close paren")]
-    Nil l -> throwError [(l, "Unexpected end of input")]
+    (l, IdLower s) :- _ -> tell [(l, "Unexpected lower case identifier: " <> s)] *> empty
+    (l, IdUpper s) :- _ -> tell [(l, "Unexpected upper case identifier: " <> s)] *> empty
+    (l, IdSymbol s) :- _ -> tell [(l, "Unexpected symbol identifier: " <> s)] *> empty
+    (l, IdColon s) :- _ -> tell [(l, "Unexpected colon identifier: " <> s)] *> empty
+    (l, Equals) :- _ -> tell [(l, "Unexpected equals")] *> empty
+    (l, Newline) :- _ -> tell [(l, "Unexpected newline")] *> empty
+    (l, OpenParen) :- _ -> tell [(l, "Unexpected open paren")] *> empty
+    (l, CloseParen) :- _ -> tell [(l, "Unexpected close paren")] *> empty
+    Nil l -> tell [(l, "Unexpected end of input")] *> empty
