@@ -16,9 +16,9 @@ import Dama.Error
 import Dama.Location
 import Dama.Token
 
-newtype Parser a = Parser { runParser :: StateT (LocList Token) (MaybeT (Writer [Error])) a }
+newtype Parser a = Parser { runParser :: StateT (LocList Token) (MaybeT (Writer Error)) a }
     deriving ( Functor, Applicative, Monad, Alternative, MonadPlus
-             , MonadState (LocList Token), MonadWriter [Error]
+             , MonadState (LocList Token), MonadWriter Error
              )
 
 instance Monoid (Parser a) where
@@ -29,7 +29,7 @@ parse :: LocList Token -> Either Error Program
 parse = toEither . runWriter . runMaybeT . evalStateT (runParser program)
   where
     toEither (Just p, _) = Right p
-    toEither (Nothing, es) = Left $ maximum es
+    toEither (Nothing, e) = Left e
 
 program :: Parser Program
 program = many newline *> ((:) <$> declaration <*> program) <> ([] <$ end)
@@ -94,12 +94,12 @@ end = get >>= \case
 
 unexpected :: Parser a
 unexpected = get >>= \case
-    (l, IdLower s) :- _ -> tell [(l, "Unexpected lower case identifier: " <> s)] *> empty
-    (l, IdUpper s) :- _ -> tell [(l, "Unexpected upper case identifier: " <> s)] *> empty
-    (l, IdSymbol s) :- _ -> tell [(l, "Unexpected symbol identifier: " <> s)] *> empty
-    (l, IdColon s) :- _ -> tell [(l, "Unexpected colon identifier: " <> s)] *> empty
-    (l, Equals) :- _ -> tell [(l, "Unexpected equals")] *> empty
-    (l, Newline) :- _ -> tell [(l, "Unexpected newline")] *> empty
-    (l, OpenParen) :- _ -> tell [(l, "Unexpected open paren")] *> empty
-    (l, CloseParen) :- _ -> tell [(l, "Unexpected close paren")] *> empty
-    Nil l -> tell [(l, "Unexpected end of input")] *> empty
+    (l, IdLower s) :- _ -> tell (Error l $ "Unexpected lower case identifier: " <> s) *> empty
+    (l, IdUpper s) :- _ -> tell (Error l $ "Unexpected upper case identifier: " <> s) *> empty
+    (l, IdSymbol s) :- _ -> tell (Error l $ "Unexpected symbol identifier: " <> s) *> empty
+    (l, IdColon s) :- _ -> tell (Error l $ "Unexpected colon identifier: " <> s) *> empty
+    (l, Equals) :- _ -> tell (Error l "Unexpected equals") *> empty
+    (l, Newline) :- _ -> tell (Error l "Unexpected newline") *> empty
+    (l, OpenParen) :- _ -> tell (Error l "Unexpected open paren") *> empty
+    (l, CloseParen) :- _ -> tell (Error l "Unexpected close paren") *> empty
+    Nil l -> tell (Error l "Unexpected end of input") *> empty
