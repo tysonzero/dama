@@ -32,7 +32,7 @@ parse = toEither . runWriter . runMaybeT . evalStateT (runParser program)
     toEither (Nothing, e) = Left e
 
 program :: Parser Program
-program = many newline *> ((:) <$> declaration <*> program) <> ([] <$ end)
+program = (:) <$ many newline <*> declaration <*> program <|> [] <$ end
 
 declaration :: Parser Decl
 declaration = Decl <$> idLower <* equals <*> expr False False <* newline <> end
