@@ -1,4 +1,4 @@
-module Dama.Lexer (lex) where
+module Dama.Lexer (Lexer, lex) where
 
 import Prelude hiding (lex)
 
