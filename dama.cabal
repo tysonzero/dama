@@ -9,8 +9,8 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:
-    Dama.AST, Dama.Annotator, Dama.Error, Dama.Lexer,
-    Dama.Location, Dama.Parser, Dama.Token
+    Dama.AST, Dama.Annotator, Dama.Error, Dama.Core, Dama.CoreMaker, Dama.CoreRenderer,
+    Dama.Lexer, Dama.Location, Dama.Parser, Dama.Token
   build-depends:       base ==4.9.*
                      , mtl ==2.2.*
                      , transformers ==0.5.*
