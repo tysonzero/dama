@@ -3,14 +3,14 @@ module Dama.AST
     , Decl(Decl)
     , Expr
     , ExprItem(ExprIdent, SubExpr)
-    , Ident(Prefix, Infix)
+    , Ident(ConsP, ConsI, VarP, VarI)
     ) where
 
 import Data.List.NonEmpty (NonEmpty)
 
 type Program = [Decl]
 
-data Decl = Decl String Expr
+data Decl = Decl Expr Expr
     deriving Show
 
 type Expr = NonEmpty ExprItem
@@ -19,6 +19,8 @@ data ExprItem = ExprIdent Ident | SubExpr Expr
     deriving Show
 
 data Ident
-    = Prefix String
-    | Infix String
+    = ConsP String
+    | ConsI String
+    | VarP String
+    | VarI String
     deriving Show

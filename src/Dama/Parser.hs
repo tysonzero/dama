@@ -35,15 +35,18 @@ program :: Parser Program
 program = (:) <$ many newline <*> declaration <*> program <|> [] <$ end
 
 declaration :: Parser Decl
-declaration = Decl <$> idLower <* equals <*> expr False False <* newline <> end
+declaration = Decl <$> expr False False <* equals <*> expr False False <* newline <> end
 
 expr :: Bool -> Bool -> Parser Expr
 expr l r = (<|) <$> prefixPart <*> expr True r
        <|> (<|) <$> bool prefixPart anyPart l <*> expr False r
        <|> (:| []) <$> bool prefixPart anyPart (l && r)
   where
-    anyPart = ExprIdent . Infix <$> idSymbol <> idColon <|> prefixPart
-    prefixPart = ExprIdent . Prefix <$> idLower <> idUpper
+    anyPart = ExprIdent . ConsI <$> idColon
+          <|> ExprIdent . VarI <$> idSymbol
+          <|> prefixPart
+    prefixPart = ExprIdent . ConsP <$> idUpper
+             <|> ExprIdent . VarP <$> idLower
              <|> SubExpr <$ openParen <*> parenExpr <* closeParen
     parenExpr = expr False True <|> expr True False <|> (:| []) <$> anyPart
 
