@@ -1,4 +1,4 @@
-module Dama.Token
+module Dama.Lexer.Token
     ( Token
         ( IdLower 
         , IdUpper 

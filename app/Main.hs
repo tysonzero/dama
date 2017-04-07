@@ -6,8 +6,8 @@ import Data.Monoid ((<>))
 import System.Environment (getArgs)
 
 import Dama.Annotator (annotate)
-import Dama.Lexer (lex)
-import Dama.Parser (parse)
+import Dama.Lexer.Lexer (lex)
+import Dama.Parser.Parser (parse)
 
 main :: IO ()
 main = getArgs >>= \case

@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Dama.Parser (parse) where
+module Dama.Parser.Parser (parse) where
 
 import Control.Applicative (Alternative, empty, many, (<|>))
 import Control.Monad (MonadPlus)
@@ -11,10 +11,10 @@ import Data.Bool (bool)
 import Data.List.NonEmpty (NonEmpty((:|)), (<|))
 import Data.Monoid ((<>))
 
-import Dama.AST
+import Dama.Parser.AST
 import Dama.Error
 import Dama.Location
-import Dama.Token
+import Dama.Lexer.Token
 
 newtype Parser a = Parser { runParser :: StateT (LocList Token) (MaybeT (Writer Error)) a }
     deriving ( Functor, Applicative, Monad, Alternative, MonadPlus

@@ -1,4 +1,4 @@
-module Dama.Lexer (Lexer, lex) where
+module Dama.Lexer.Lexer (Lexer, lex) where
 
 import Prelude hiding (lex)
 
@@ -7,7 +7,7 @@ import Data.Monoid ((<>))
 
 import Dama.Error
 import Dama.Location
-import Dama.Token
+import Dama.Lexer.Token
 
 type Lexer = LocList Char -> Either Error (LocList Token)
 

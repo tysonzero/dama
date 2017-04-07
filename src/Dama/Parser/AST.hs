@@ -1,4 +1,4 @@
-module Dama.AST
+module Dama.Parser.AST
     ( Program
     , Decl(Decl)
     , Expr

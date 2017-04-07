@@ -1,4 +1,4 @@
-module Dama.Core
+module Dama.Core.Core
     ( Program
     , Expr(Var, App, Lam, Case, Let)
     , Decl((:=))

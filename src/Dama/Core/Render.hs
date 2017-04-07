@@ -1,9 +1,9 @@
-module Dama.CoreRenderer (renderCore) where
+module Dama.Core.Render (renderCore) where
 
 import Data.List (intercalate)
 import Data.Maybe (fromMaybe)
 import Data.Monoid ((<>))
-import Dama.Core
+import Dama.Core.Core
 
 renderCore :: Program -> String
 renderCore ds = unwords $ renderDec <$> ds
