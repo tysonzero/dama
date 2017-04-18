@@ -35,18 +35,28 @@ program :: Parser Program
 program = (:) <$ many newline <*> declaration <*> program <|> [] <$ end
 
 declaration :: Parser Decl
-declaration = Decl <$> expr False False <* equals <*> expr False False <* newline <> end
+declaration = Decl <$> exprR False False <* equals <*> expr False False <* newline <> end
+
+exprR :: Bool -> Bool -> Parser ExprR
+exprR l r = (<|) <$> prefixPart <*> exprR True r
+       <|> (<|) <$> bool prefixPart anyPart l <*> exprR False r
+       <|> (:| []) <$> bool prefixPart anyPart (l && r)
+  where
+    anyPart = ExprIdentR . ConsI <$> idColon
+          <|> ExprIdentR . VarI <$> idSymbol
+          <|> prefixPart
+    prefixPart = ExprIdentR . ConsP <$> idUpper
+             <|> ExprIdentR . VarP <$> idLower
+             <|> SubExprR <$ openParen <*> parenExpr <* closeParen
+    parenExpr = exprR False True <|> exprR True False <|> (:| []) <$> anyPart
 
 expr :: Bool -> Bool -> Parser Expr
 expr l r = (<|) <$> prefixPart <*> expr True r
        <|> (<|) <$> bool prefixPart anyPart l <*> expr False r
        <|> (:| []) <$> bool prefixPart anyPart (l && r)
   where
-    anyPart = ExprIdent . ConsI <$> idColon
-          <|> ExprIdent . VarI <$> idSymbol
-          <|> prefixPart
-    prefixPart = ExprIdent . ConsP <$> idUpper
-             <|> ExprIdent . VarP <$> idLower
+    anyPart = ExprIdent . Infix <$> idColon <> idSymbol <|> prefixPart
+    prefixPart = ExprIdent . Prefix <$> idUpper <> idLower
              <|> SubExpr <$ openParen <*> parenExpr <* closeParen
     parenExpr = expr False True <|> expr True False <|> (:| []) <$> anyPart
 
