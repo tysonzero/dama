@@ -9,6 +9,8 @@ module Dama.Parser.AST
     , Ident(Prefix, Infix)
     ) where
 
+import Dama.Location
+
 import Data.List.NonEmpty (NonEmpty)
 
 type Program = [Decl]
@@ -34,6 +36,6 @@ data ExprItem = ExprIdent Ident | SubExpr Expr
     deriving Show
 
 data Ident
-    = Prefix String
-    | Infix String
+    = Prefix Location String
+    | Infix Location String
     deriving Show

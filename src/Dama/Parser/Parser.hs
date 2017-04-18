@@ -42,11 +42,11 @@ exprR l r = (<|) <$> prefixPart <*> exprR True r
        <|> (<|) <$> bool prefixPart anyPart l <*> exprR False r
        <|> (:| []) <$> bool prefixPart anyPart (l && r)
   where
-    anyPart = ExprIdentR . ConsI <$> idColon
-          <|> ExprIdentR . VarI <$> idSymbol
+    anyPart = ExprIdentR . ConsI . snd <$> idColon
+          <|> ExprIdentR . VarI . snd <$> idSymbol
           <|> prefixPart
-    prefixPart = ExprIdentR . ConsP <$> idUpper
-             <|> ExprIdentR . VarP <$> idLower
+    prefixPart = ExprIdentR . ConsP . snd <$> idUpper
+             <|> ExprIdentR . VarP . snd <$> idLower
              <|> SubExprR <$ openParen <*> parenExpr <* closeParen
     parenExpr = exprR False True <|> exprR True False <|> (:| []) <$> anyPart
 
@@ -55,29 +55,29 @@ expr l r = (<|) <$> prefixPart <*> expr True r
        <|> (<|) <$> bool prefixPart anyPart l <*> expr False r
        <|> (:| []) <$> bool prefixPart anyPart (l && r)
   where
-    anyPart = ExprIdent . Infix <$> idColon <> idSymbol <|> prefixPart
-    prefixPart = ExprIdent . Prefix <$> idUpper <> idLower
+    anyPart = ExprIdent . uncurry Infix <$> idColon <> idSymbol <|> prefixPart
+    prefixPart = ExprIdent . uncurry Prefix <$> idUpper <> idLower
              <|> SubExpr <$ openParen <*> parenExpr <* closeParen
     parenExpr = expr False True <|> expr True False <|> (:| []) <$> anyPart
 
-idLower :: Parser String
+idLower :: Parser (Location, String)
 idLower = get >>= \case
-    (_, IdLower s) :- xs -> put xs *> pure s
+    (l, IdLower s) :- xs -> put xs *> pure (l, s)
     _ -> unexpected
 
-idUpper :: Parser String
+idUpper :: Parser (Location, String)
 idUpper = get >>= \case
-    (_, IdUpper s) :- xs -> put xs *> pure s
+    (l, IdUpper s) :- xs -> put xs *> pure (l, s)
     _ -> unexpected
 
-idSymbol :: Parser String
+idSymbol :: Parser (Location, String)
 idSymbol = get >>= \case
-    (_, IdSymbol s) :- xs -> put xs *> pure s
+    (l, IdSymbol s) :- xs -> put xs *> pure (l, s)
     _ -> unexpected
 
-idColon :: Parser String
+idColon :: Parser (Location, String)
 idColon = get >>= \case
-    (_, IdColon s) :- xs -> put xs *> pure s
+    (l, IdColon s) :- xs -> put xs *> pure (l, s)
     _ -> unexpected
 
 equals :: Parser ()

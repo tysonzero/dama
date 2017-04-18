@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Dama.Fixity.Resolve (resolveFixity) where
 
 import Data.List.NonEmpty (NonEmpty((:|)), (<|))
@@ -21,33 +23,38 @@ resolveExprR _ = error "resolveExprR"
 
 resolveExpr :: AST.Expr -> Either Error IR.Expr
 resolveExpr (x :| xs) = case x :| xs of
-    AST.ExprIdent (AST.Infix o) :| y : ys -> do
+    AST.ExprIdent (AST.Infix _ o) :| y : ys -> do
         e <- resolveExpr $ y :| ys
-        let v = head $ dropWhile (`S.member` variables e) (("section" ++) . show <$> [1 :: Integer ..])
+        let v = getFresh "secR" $ variables e
         go (Just (Right . IR.Lam v $ IR.App (IR.App (IR.Lit o) (IR.Lit v)) e, True)) (x :| []) xs
-    AST.ExprIdent (AST.Infix o) :| [] -> Right $ IR.Lit o
+    AST.ExprIdent (AST.Infix _ o) :| [] -> Right $ IR.Lit o
     _ -> go Nothing (x :| []) xs
   where
-    go :: Maybe (Either Error IR.Expr, Bool) -> NonEmpty AST.ExprItem -> [AST.ExprItem] -> Either Error IR.Expr
-    go (Just (_, True)) _ (AST.ExprIdent (AST.Infix _) : _) = Left UnknownError  -- XXX locations
-    go _ ps (AST.ExprIdent (AST.Infix o) : fs) = case fs of
+    go (Just (_, True)) _ (AST.ExprIdent (AST.Infix l _) : _)
+        = Left $ Error l "Section operator must have lowest precedence"
+    go _ ps (AST.ExprIdent (AST.Infix l o) : fs) = case fs of
         f : fs' -> go ( Just
-                ( IR.App <$> (IR.App (IR.Lit o) <$> resolveExpr (NE.reverse ps)) <*> resolveExpr (f :| fs')
+                ( IR.App . IR.App (IR.Lit o) <$> resolveExpr (NE.reverse ps)
+                    <*> resolveExpr (f :| fs')
                 , False ) )
-            (AST.ExprIdent (AST.Infix o) <| ps) fs
+            (AST.ExprIdent (AST.Infix l o) <| ps) fs
         [] -> do
             e <- resolveExpr $ NE.reverse ps
-            let v = head $ dropWhile (`S.member` variables e) (("section" ++) . show <$> [1 :: Integer ..])
+            let v = getFresh "secL" $ variables e
             pure . IR.Lam v . flip IR.App (IR.Lit v) $ IR.App (IR.Lit o) e
     go e ps (f : fs) = go e (f <| ps) fs
     go (Just (e, _)) _ [] = e
-    go Nothing (p :| (p' : ps)) [] = IR.App <$> resolveExpr (NE.reverse $ p' :| ps) <*> resolveExprItem p
+    go Nothing (p :| (p' : ps)) []
+        = IR.App <$> resolveExpr (NE.reverse $ p' :| ps) <*> resolveExprItem p
     go Nothing (p :| []) [] = resolveExprItem p
 
 resolveExprItem :: AST.ExprItem -> Either Error IR.Expr
-resolveExprItem (AST.ExprIdent (AST.Prefix n)) = Right $ IR.Lit n
-resolveExprItem (AST.ExprIdent (AST.Infix n)) = Right $ IR.Lit n
+resolveExprItem (AST.ExprIdent (AST.Prefix _ n)) = Right $ IR.Lit n
+resolveExprItem (AST.ExprIdent (AST.Infix _ n)) = Right $ IR.Lit n
 resolveExprItem (AST.SubExpr e) = resolveExpr e
+
+getFresh :: String -> Set String -> String
+getFresh n vs = head . dropWhile (`S.member` vs) . (n :) $ (n ++) . show @Integer <$> [1 ..]
 
 variables :: IR.Expr -> Set String
 variables (IR.Lit n) = S.singleton n
