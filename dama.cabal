@@ -17,7 +17,6 @@ library
                      , mtl ==2.2.*
                      , transformers ==0.5.*
   default-language:    Haskell2010
-  default-extensions:  LambdaCase
 
 executable dama
   hs-source-dirs:      app
@@ -26,4 +25,3 @@ executable dama
   build-depends:       base ==4.9.*
                      , dama ==0.0.*
   default-language:    Haskell2010
-  default-extensions:  LambdaCase
