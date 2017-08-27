@@ -44,7 +44,7 @@ resolveExpr (x :| xs) = case x :| xs of
             pure . IR.Lam v . flip IR.App (IR.Lit v) $ IR.App (IR.Lit o) e
     go e ps (f : fs) = go e (f <| ps) fs
     go (Just (e, _)) _ [] = e
-    go Nothing (p :| (p' : ps)) []
+    go Nothing (p :| p' : ps) []
         = IR.App <$> resolveExpr (NE.reverse $ p' :| ps) <*> resolveExprItem p
     go Nothing (p :| []) [] = resolveExprItem p
 
