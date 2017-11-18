@@ -1,41 +1,50 @@
 module Dama.Parser.AST
     ( Program
-    , Decl(Decl)
-    , ExprR
-    , ExprItemR(ExprIdentR, SubExprR)
-    , IdentR(ConsP, ConsI, VarP, VarI)
-    , Expr
-    , ExprItem(ExprIdent, SubExpr)
-    , Ident(Prefix, Infix)
+    , Decl(PDecl, FDecl)
+    , ExprR(ExprRVar, ExprRC)
+    , ExprRC(ExprRCons, AppR, ChainR)
+    , Expr(ExprIdent, App, Chain, LeftSection, RightSection)
+    , Ident(Ident)
+    , AltList((:+), (:+:))
     ) where
 
 import Dama.Location
 
-import Data.List.NonEmpty (NonEmpty)
-
 type Program = [Decl]
 
-data Decl = Decl ExprR Expr
+data Decl
+    = PDecl ExprR Expr
+    | FDecl Ident [ExprR] Expr
     deriving Show
 
-type ExprR = NonEmpty ExprItemR
-
-data ExprItemR = ExprIdentR IdentR | SubExprR ExprR
+data ExprR
+    = ExprRVar Ident
+    | ExprRC ExprRC
     deriving Show
 
-data IdentR
-    = ConsP String
-    | ConsI String
-    | VarP String
-    | VarI String
+data ExprRC
+    = ExprRCons Ident
+    | AppR ExprRC ExprR
+    | ChainR (AltList ExprR Ident ExprR)
     deriving Show
 
-type Expr = NonEmpty ExprItem
-
-data ExprItem = ExprIdent Ident | SubExpr Expr
+data Expr
+    = ExprIdent Ident
+    | App Expr Expr
+    | Chain (AltList Expr Ident Expr)
+    | LeftSection (AltList Expr Ident Ident)
+    | RightSection (AltList Ident Expr Expr)
     deriving Show
 
-data Ident
-    = Prefix Location String
-    | Infix Location String
+data Ident = Ident Location String
     deriving Show
+
+data AltList a b c
+    = a :+: b
+    | a :+ AltList b a c
+infixr 5 :+
+infixr 5 :+:
+
+instance (Show a, Show b, Show c) => Show (AltList a b c) where
+    showsPrec n (x :+: y) = showParen (n > 5) $ showsPrec 6 x . (" :+: " ++) . showsPrec 6 y
+    showsPrec n (x :+ xs) = showParen (n > 5) $ showsPrec 6 x . (" :+ " ++) . showsPrec 5 xs

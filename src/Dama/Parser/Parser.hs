@@ -7,12 +7,11 @@ import Control.Monad (MonadPlus)
 import Control.Monad.State (MonadState, StateT, evalStateT, get, put)
 import Control.Monad.Trans.Maybe (MaybeT, runMaybeT)
 import Control.Monad.Writer (MonadWriter, Writer, runWriter, tell)
-import Data.Bool (bool)
-import Data.List.NonEmpty (NonEmpty((:|)), (<|))
+import Data.List (foldl')
 import Data.Monoid ((<>))
 
-import Dama.Parser.AST
 import Dama.Error
+import Dama.Parser.AST
 import Dama.Location
 import Dama.Lexer.Token
 
@@ -28,56 +27,108 @@ instance Monoid (Parser a) where
 parse :: LocList Token -> Either Error Program
 parse = toEither . runWriter . runMaybeT . evalStateT (runParser program)
   where
-    toEither (Just p, _) = Right p
-    toEither (Nothing, e) = Left e
+    toEither (mp, e) = maybe (Left e) Right mp
 
 program :: Parser Program
 program = (:) <$ many newline <*> declaration <*> program <|> [] <$ end
 
 declaration :: Parser Decl
-declaration = Decl <$> exprR False False <* equals <*> expr False False <* newline <> end
+declaration = PDecl <$> exprR <* equals <*> expr <* newline <> end
+          <|> uncurry FDecl <$> funcDecl <* equals <*> expr
 
-exprR :: Bool -> Bool -> Parser ExprR
-exprR l r = (<|) <$> prefixPart <*> exprR True r
-       <|> (<|) <$> bool prefixPart anyPart l <*> exprR False r
-       <|> (:| []) <$> bool prefixPart anyPart (l && r)
-  where
-    anyPart = ExprIdentR . ConsI . snd <$> idColon
-          <|> ExprIdentR . VarI . snd <$> idSymbol
-          <|> prefixPart
-    prefixPart = ExprIdentR . ConsP . snd <$> idUpper
-             <|> ExprIdentR . VarP . snd <$> idLower
-             <|> SubExprR <$ openParen <*> parenExpr <* closeParen
-    parenExpr = exprR False True <|> exprR True False <|> (:| []) <$> anyPart
+funcDecl :: Parser (Ident, [ExprR])
+funcDecl = (\(o, as) bs -> (o, as ++ bs)) <$ openParen <*> funcDecl <* closeParen <*> many exprRApp
+       <|> (\a o b -> (o, [a, b])) <$> exprR <*> idSymbol <*> exprR
+       <|> (,) <$> (idLower <|> openParen *> idSymbol <* closeParen) <*> many exprRApp
 
-expr :: Bool -> Bool -> Parser Expr
-expr l r = (<|) <$> prefixPart <*> expr True r
-       <|> (<|) <$> bool prefixPart anyPart l <*> expr False r
-       <|> (:| []) <$> bool prefixPart anyPart (l && r)
-  where
-    anyPart = ExprIdent . uncurry Infix <$> idColon <> idSymbol <|> prefixPart
-    prefixPart = ExprIdent . uncurry Prefix <$> idUpper <> idLower
-             <|> SubExpr <$ openParen <*> parenExpr <* closeParen
-    parenExpr = expr False True <|> expr True False <|> (:| []) <$> anyPart
+exprR :: Parser ExprR
+exprR = ExprRVar <$ openParen <*> idSymbol <* closeParen
+    <|> ExprRC <$> exprRC
+    <|> ExprRVar <$> idLower
+    <|> exprRChain
 
-idLower :: Parser (Location, String)
+exprRC :: Parser ExprRC
+exprRC = ExprRCons <$ openParen <*> idColon <* closeParen
+     <|> ChainR <$> chainREE
+     <|> exprRCChain
+
+chainREE :: Parser (AltList ExprR Ident ExprR)
+chainREE = (:+) <$> exprRChain <*> chainRIE
+
+chainRIE :: Parser (AltList Ident ExprR ExprR)
+chainRIE = (:+) <$> idColon <*> chainREE
+       <|> (:+:) <$> idColon <*> exprRChain
+
+exprRChain :: Parser ExprR
+exprRChain = ExprRC <$> exprRCChain
+         <|> exprRApp
+
+exprRCChain :: Parser ExprRC
+exprRCChain = foldl' AppR <$> exprRCApp <*> many exprRApp
+
+exprRApp :: Parser ExprR
+exprRApp = ExprRC <$> exprRCApp
+       <|> ExprRVar <$> idLower
+       <|> ExprRVar <$ openParen <*> idSymbol <* closeParen
+       <|> openParen *> exprR <* closeParen
+
+exprRCApp :: Parser ExprRC
+exprRCApp = ExprRCons <$> idUpper
+        <|> ExprRCons <$ openParen <*> idColon <* closeParen
+        <|> openParen *> exprRC <* closeParen
+
+expr :: Parser Expr
+expr = LeftSection <$ openParen <*> chainEI <* closeParen
+   <|> RightSection <$ openParen <*> chainIE <* closeParen
+   <|> ExprIdent <$ openParen <*> infix_ <* closeParen
+   <|> Chain <$> chainEE
+   <|> exprChain
+
+chainEE :: Parser (AltList Expr Ident Expr)
+chainEE = (:+) <$> exprChain <*> chainIE
+
+chainEI :: Parser (AltList Expr Ident Ident)
+chainEI = (:+) <$> exprChain <*> chainII
+      <|> (:+:) <$> exprChain <*> infix_
+
+chainIE :: Parser (AltList Ident Expr Expr)
+chainIE = (:+) <$> infix_ <*> chainEE
+      <|> (:+:) <$> infix_ <*> exprChain
+
+chainII :: Parser (AltList Ident Expr Ident)
+chainII = (:+) <$> infix_ <*> chainEI
+
+exprChain :: Parser Expr
+exprChain = foldl' App <$> exprApp <*> many exprApp
+
+exprApp :: Parser Expr
+exprApp = ExprIdent <$> prefix
+      <|> openParen *> expr <* closeParen
+
+prefix :: Parser Ident
+prefix = idLower <> idUpper
+
+infix_ :: Parser Ident
+infix_ = idSymbol <> idColon
+
+idLower :: Parser Ident
 idLower = get >>= \case
-    (l, IdLower s) :- xs -> put xs *> pure (l, s)
+    (l, IdLower s) :- xs -> Ident l s <$ put xs
     _ -> unexpected
 
-idUpper :: Parser (Location, String)
+idUpper :: Parser Ident
 idUpper = get >>= \case
-    (l, IdUpper s) :- xs -> put xs *> pure (l, s)
+    (l, IdUpper s) :- xs -> Ident l s <$ put xs
     _ -> unexpected
 
-idSymbol :: Parser (Location, String)
+idSymbol :: Parser Ident
 idSymbol = get >>= \case
-    (l, IdSymbol s) :- xs -> put xs *> pure (l, s)
+    (l, IdSymbol s) :- xs -> Ident l s <$ put xs
     _ -> unexpected
 
-idColon :: Parser (Location, String)
+idColon :: Parser Ident
 idColon = get >>= \case
-    (l, IdColon s) :- xs -> put xs *> pure (l, s)
+    (l, IdColon s) :- xs -> Ident l s <$ put xs
     _ -> unexpected
 
 equals :: Parser ()
