@@ -1,3 +1,5 @@
+{-# LANGUAGE GADTs #-}
+
 module Dama.Parser.AST
     ( Program
     , Decl(PDecl, FDecl)
@@ -39,9 +41,9 @@ data Expr
 data Ident = Ident Location String
     deriving Show
 
-data AltList a b c
-    = a :+: b
-    | a :+ AltList b a c
+data AltList a b c where
+    (:+:) :: (b ~ c) => a -> b -> AltList a b c
+    (:+) :: a -> AltList b a c -> AltList a b c
 infixr 5 :+
 infixr 5 :+:
 
