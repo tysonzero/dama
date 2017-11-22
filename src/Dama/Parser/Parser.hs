@@ -78,10 +78,7 @@ exprRCApp = ExprRCons <$> idUpper
         <|> openParen *> exprRC <* closeParen
 
 expr :: Parser Expr
-expr = LeftSection <$ openParen <*> chainEI <* closeParen
-   <|> RightSection <$ openParen <*> chainIE <* closeParen
-   <|> ExprIdent <$ openParen <*> infix_ <* closeParen
-   <|> Chain <$> chainEE
+expr = Chain <$> chainEE
    <|> exprChain
 
 chainEE :: Parser (AltList Expr Ident Expr)
@@ -103,6 +100,9 @@ exprChain = foldl' App <$> exprApp <*> many exprApp
 
 exprApp :: Parser Expr
 exprApp = ExprIdent <$> prefix
+      <|> LeftSection <$ openParen <*> chainEI <* closeParen
+      <|> RightSection <$ openParen <*> chainIE <* closeParen
+      <|> ExprIdent <$ openParen <*> infix_ <* closeParen
       <|> openParen *> expr <* closeParen
 
 prefix :: Parser Ident
